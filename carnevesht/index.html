@@ -25,12 +25,16 @@
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <textarea class="form-control mt-2 mb-5" rows="20">{{compute_text}}</textarea>
+                <textarea id="main_text_area" class="form-control mt-2 mb-5" rows="20">{{compute_text}}</textarea>
             </div>
             <div class="col-md-12 mb-3">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">اطلاعت کارنوشت</h3>
+                        <h3 class="card-title">اطلاعت کارنوشت
+                            <button class="btn btn-primary" @click="remove_app_data_from_cookie"> کارنوشت جدید  </button>
+                            <button class="btn btn-primary" @click="copy_to_clipboard">  کپی کارنوشت  </button>
+                        </h3>
+
                     </div>
 
                     <!--                    اضافه کردن جلسه-->
@@ -164,10 +168,14 @@
     var form_name=getCookie("form_name")??""
     var tarikh = new persianDate();
     let time=tarikh.toLocale('en').format();
-    var app = new Vue({
-        el: '#app',
-        data: {
-            render_text:"",
+
+    //get app data from cookie
+    var app_data=getCookie("app_data")??""
+    try{
+         app_data=JSON.parse(app_data)
+    }catch (e) {
+        app_data = {
+
             time:time,
             form_name: form_name,
             form_spend_time: "",
@@ -176,14 +184,39 @@
             meet_form_title:"",
             meet_form_description:"",
             tasks:[],
-            meetings:[],
+            meetings:[],}
+    }
 
 
-
-
-        },
+    var app = new Vue({
+        el: '#app',
+        data:app_data,
         methods:{
+            remove_app_data_from_cookie:function () {
+                setCookie("app_data","",1)
+                window.location.reload()
+            },
+            copy_to_clipboard:function (){
+                let id="main_text_area";
+                let txt=document.getElementById(id);
+                txt.select();
+                document.execCommand("copy");
+                txt.blur();
+            },
+            store_app_data:function(){
+                setCookie("app_data",JSON.stringify({
+                    time:this.time,
+                    form_name:this.form_name,
+                    form_spend_time:this.form_spend_time,
+                    task_form_title:this.task_form_title,
+                    task_form_description:this.task_form_description,
+                    meet_form_title:this.meet_form_title,
+                    meet_form_description:this.meet_form_description,
+                    tasks:this.tasks,
+                    meetings:this.meetings,
 
+                }),10)
+            },
             addtask:function(){
                 if (this.task_form_title==""){
                     alert("عنوان تسک را وارد کنید")
@@ -215,6 +248,7 @@
         },
         computed: {
             compute_text: function() {
+                this.store_app_data();
                 setCookie("form_name", this.form_name, 3);
                 let result=template.replaceAll("{name}",this.form_name);
                 result=result.replaceAll("{time}",this.time);
