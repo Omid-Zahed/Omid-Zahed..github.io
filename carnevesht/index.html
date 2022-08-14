@@ -33,6 +33,14 @@
                         <h3 class="card-title">اطلاعت کارنوشت
                             <button class="btn btn-primary" @click="remove_app_data_from_cookie"> کارنوشت جدید  </button>
                             <button class="btn btn-primary" @click="copy_to_clipboard">  کپی کارنوشت  </button>
+<!--                            is store in cookie-->
+                           <label class="mr-5" style="user-select: none">
+                               <span style="font-size: 12px">ذخیره در لوکال</span>
+                                 <input :checked="is_store_in_cookie?'checked':''" type="checkbox" @click="toggle_store_in_cookie" >
+                               <p style="font-size: 9px" class="badge  " v-if="is_store_in_cookie">حد اکثر ذخیره سازی 4000 بایت است</p>
+                               <small v-if="is_store_in_cookie" style="font-size: 11px" class="badge badge-info">{{computed_characters_count}}</small>
+
+                           </label>
                         </h3>
 
                     </div>
@@ -168,14 +176,18 @@
     var form_name=getCookie("form_name")??""
     var tarikh = new persianDate();
     let time=tarikh.toLocale('en').format();
-
+    let is_store_in_cookie=getCookie("is_store_in_cookie")=="true"?true:false;
     //get app data from cookie
     var app_data=getCookie("app_data")??""
     try{
+        if (is_store_in_cookie==false){
+            throw "is_store_in_cookie is true"
+        }
          app_data=JSON.parse(app_data)
+        app_data.is_store_in_cookie=is_store_in_cookie
     }catch (e) {
         app_data = {
-
+            is_store_in_cookie:true,
             time:time,
             form_name: form_name,
             form_spend_time: "",
@@ -185,6 +197,7 @@
             meet_form_description:"",
             tasks:[],
             meetings:[],}
+        app_data.is_store_in_cookie=is_store_in_cookie
     }
 
 
@@ -192,6 +205,10 @@
         el: '#app',
         data:app_data,
         methods:{
+            toggle_store_in_cookie:function(){
+                this.is_store_in_cookie=!this.is_store_in_cookie
+                setCookie("is_store_in_cookie",this.is_store_in_cookie,1)
+            },
             remove_app_data_from_cookie:function () {
                 setCookie("app_data","",1)
                 window.location.reload()
@@ -204,7 +221,8 @@
                 txt.blur();
             },
             store_app_data:function(){
-                setCookie("app_data",JSON.stringify({
+                //
+                let data =JSON.stringify({
                     time:this.time,
                     form_name:this.form_name,
                     form_spend_time:this.form_spend_time,
@@ -214,8 +232,15 @@
                     meet_form_description:this.meet_form_description,
                     tasks:this.tasks,
                     meetings:this.meetings,
+                    is_store_in_cookie:this.is_store_in_cookie,
 
-                }),10)
+                });
+                //alert of size of data to store is more than 3.5 kn
+                if(new Blob([data]).size>4000){
+                    alert("حجم داده هایی که باید ذخیره شوند بیشتر از  4 کیلوبایت است")
+                    return;
+                }
+                setCookie("app_data",data,10)
             },
             addtask:function(){
                 if (this.task_form_title==""){
@@ -247,8 +272,28 @@
             },
         },
         computed: {
+            computed_characters_count: function () {
+                let data =JSON.stringify({
+                    time:this.time,
+                    form_name:this.form_name,
+                    form_spend_time:this.form_spend_time,
+                    task_form_title:this.task_form_title,
+                    task_form_description:this.task_form_description,
+                    meet_form_title:this.meet_form_title,
+                    meet_form_description:this.meet_form_description,
+                    tasks:this.tasks,
+                    meetings:this.meetings,
+                    is_store_in_cookie:this.is_store_in_cookie,
+
+                });
+                //alert of size of data to store is more than 3.5 kn
+                return new Blob([data]).size;
+            },
             compute_text: function() {
-                this.store_app_data();
+                if (this.is_store_in_cookie){
+                    this.store_app_data();
+                }
+
                 setCookie("form_name", this.form_name, 3);
                 let result=template.replaceAll("{name}",this.form_name);
                 result=result.replaceAll("{time}",this.time);
